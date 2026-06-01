@@ -173,10 +173,24 @@ class CarModelBrake(models.Model):
 class Exhaust(models.Model):
     name = models.CharField(max_length=100)
 
+    class Meta:
+        verbose_name = "Exhaust"
+        verbose_name_plural = "Exhausts"
+
+    def __str__(self):
+        return self.name
+
 class CarModelExhaust(models.Model):
-    car_model = models.ForeignKey(CarModel, on_delete=models.CASCADE)
+    car_model = models.ForeignKey(CarModel, on_delete=models.CASCADE, related_name='car_model_exhausts')
     exhaust = models.ForeignKey(Exhaust, on_delete=models.CASCADE)
     price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        verbose_name = "Car Model Exhaust"
+        verbose_name_plural = "Car Model Exhausts"
+
+    def __str__(self):
+        return f"{self.car_model} - {self.exhaust}"
 
 class UsedCar(models.Model):
     brand = models.ForeignKey(Brand, on_delete=models.CASCADE)
@@ -196,3 +210,49 @@ class CarModelSpecification(models.Model):
     exterior_length = models.DecimalField(max_digits=6, decimal_places=2)
     exterior_width = models.DecimalField(max_digits=6, decimal_places=2)
     exterior_height = models.DecimalField(max_digits=6, decimal_places=2)
+
+class Cart(models.Model):
+    customer = models.OneToOneField('accounts.CustomerProfile', on_delete=models.CASCADE, related_name='cart')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.customer.user.username} Cart"
+    
+class CartItem(models.Model):
+    cart = models.ForeignKey( Cart, on_delete=models.CASCADE, related_name='items')
+
+    car_model = models.ForeignKey( CarModel, on_delete=models.CASCADE)
+
+    quantity = models.PositiveIntegerField(default=1)
+
+    base_price = models.DecimalField( max_digits=12, decimal_places=2)
+
+    total_price = models.DecimalField( max_digits=12, decimal_places=2)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.car_model}"
+
+class CartItemConfiguration(models.Model):
+    cart_item = models.OneToOneField(CartItem, on_delete=models.CASCADE, related_name='configuration')
+
+    engine = models.ForeignKey(CarModelEngine, null=True, blank=True, on_delete=models.SET_NULL)
+
+    transmission = models.ForeignKey(CarModelTransmission, null=True, blank=True, on_delete=models.SET_NULL)
+
+    brake = models.ForeignKey(CarModelBrake, null=True, blank=True, on_delete=models.SET_NULL)
+
+    exhaust = models.ForeignKey(CarModelExhaust, null=True, blank=True, on_delete=models.SET_NULL)
+
+    wheel_package = models.ForeignKey( CarModelWheelPackage, null=True, blank=True, on_delete=models.SET_NULL)
+
+class CartItemFeature(models.Model):
+    configuration = models.ForeignKey(CartItemConfiguration, on_delete=models.CASCADE, related_name='features')
+
+    feature = models.ForeignKey(CarModelFeature, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return str(self.feature)
