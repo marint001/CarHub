@@ -75,49 +75,38 @@ class TransmissionOptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CarModelTransmission
-        fields = [
-            'id',
-            'name',
-            'price'
-        ]
+        fields = ['id', 'name', 'price']
 
 class BrakeOptionSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source='brake.name')
 
     class Meta:
         model = CarModelBrake
-        fields = [
-            'id',
-            'name',
-            'price'
-        ]
+        fields = ['id', 'name', 'price']
 
 class ExhaustOptionSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source='exhaust.name')
 
     class Meta:
         model = CarModelExhaust
-        fields = [
-            'id',
-            'name',
-            'price'
-        ]
+        fields = ['id', 'name', 'price']
 
 class FeatureOptionSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(source='id')
+    id = serializers.IntegerField()
     category = serializers.CharField(source='feature.category.name')
     name = serializers.CharField(source='feature.name')
 
     class Meta:
         model = CarModelFeature
-        fields = ['id', 'category', 'name', 'price', 'vip_price']
+        fields = ['id', 'category', 'name', 'price']
 
 class FeatureGroupSerializer(serializers.Serializer):
     category = serializers.CharField()
+    is_configurable = serializers.BooleanField()
     options = FeatureOptionSerializer(many=True)
 
 class WheelPackageOptionSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(source='id')
+    id = serializers.IntegerField()
 
     wheel_design = serializers.CharField(source='package.wheel_design.name')
     wheel_size = serializers.CharField(source='package.wheel_size.size_inch')
@@ -134,9 +123,9 @@ class WheelPackageOptionSerializer(serializers.ModelSerializer):
             'tyre',
             'tyre_size',
             'color',
-            'price',
-            'vip_price'
+            'price'
         ]
+
     
 class CarDetailSerializer(serializers.ModelSerializer):
     brand = serializers.CharField(source='car.brand.name')
@@ -187,28 +176,31 @@ class CarDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_features(self, obj):
-        feature_qs = obj.car_model_features.select_related(
-            'feature',
+        qs = obj.car_model_features.select_related(
             'feature__category'
+        ).order_by(
+            'feature__category__display_order',
+            'feature__category__name'
         )
 
         grouped = {}
 
-        for item in feature_qs:
-            category = item.feature.category.name
+        for item in qs:
+            category = item.feature.category
 
-            if category not in grouped:
-                grouped[category] = []
+            if category.id not in grouped:
+                grouped[category.id] = {
+                    "category": category.name,
+                    "is_configurable": category.is_configurable,
+                    "options": []
+                }
 
-            grouped[category].append(item)
+            grouped[category.id]["options"].append(item)
 
-        return [
-            {
-                'category': category,
-                'options': FeatureOptionSerializer(options, many=True).data
-            }
-            for category, options in grouped.items()
-        ]
+        groups = list(grouped.values())
+
+        return FeatureGroupSerializer(groups, many=True).data
+    
 
 class CarConfigurationSerializer(serializers.Serializer):
     car_model_id = serializers.IntegerField()
@@ -294,13 +286,14 @@ class CartConfigurationSerializer(serializers.ModelSerializer):
         package = obj.wheel_package.package
 
         return (
-            f"{package.wheel_size.size}\" "
-            f"{package.wheel_design.shape}"
+            f"{package.wheel_size.size_inch}\" "
+            f"{package.wheel_design.name}"
         )
 
 class CartItemSerializer(serializers.ModelSerializer):
 
     car = serializers.SerializerMethodField()
+    subtotal = serializers.SerializerMethodField()
 
     configuration = CartConfigurationSerializer(
         read_only=True
@@ -313,7 +306,8 @@ class CartItemSerializer(serializers.ModelSerializer):
             'car',
             'quantity',
             'base_price',
-            'total_price',
+            'unit_price',
+            'subtotal',
             'configuration',
         ]
 
@@ -323,6 +317,11 @@ class CartItemSerializer(serializers.ModelSerializer):
             f"{obj.car_model.car.name} "
             f"{obj.car_model.year}"
         )
+    def get_subtotal(self, obj):
+        return obj.unit_price * obj.quantity
     
 class UpdateCartQuantitySerializer(serializers.Serializer):
     quantity = serializers.IntegerField(min_value=1)
+
+class CarBasicSerializer(serializers.ModelSerializer):
+    brand = serializers.CharField(source='car.brand.name')

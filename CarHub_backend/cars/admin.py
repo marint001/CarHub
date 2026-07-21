@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (Brand, Car, CarModel, Engine, CarModelEngine, FeatureCategory, Feature, Transmission, CarModelTransmission, Brake, CarModelBrake, Exhaust, CarModelExhaust, CarModelWheelPackage,
-                      WheelPackage, WheelDesign, Tyre, WheelSize, TyreSize, Color, CarModelFeature)
+                      WheelPackage, WheelDesign, Tyre, WheelSize, TyreSize, Color, CarModelFeature, CarModelSpecification)
 
 admin.site.register(Brand)
 admin.site.register(Car)
@@ -23,3 +23,4 @@ admin.site.register(WheelSize)
 admin.site.register(TyreSize)
 admin.site.register(Color)
 admin.site.register(CarModelFeature)
+admin.site.register(CarModelSpecification)

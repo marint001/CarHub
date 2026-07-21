@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import car_detail, car_list, calculate_configuration, add_to_cart, remove_cart_item, view_cart
+from .views import car_detail, car_list, calculate_configuration, add_to_cart, remove_cart_item, view_cart, update_cart_quantity
 
 urlpatterns = [
     path('', car_list),
@@ -8,4 +8,5 @@ urlpatterns = [
     path('cart/add/', add_to_cart),
     path('cart/', view_cart),
     path('cart/item/<int:item_id>/remove/', remove_cart_item),
+    path('cart/item/<int:item_id>/update/', update_cart_quantity),
 ]

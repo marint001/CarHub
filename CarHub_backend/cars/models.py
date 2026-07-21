@@ -51,7 +51,14 @@ class CarModelEngine(models.Model):
 class FeatureCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
+    display_order = models.PositiveIntegerField(default=0)
+
+    is_configurable = models.BooleanField(
+        default=False,
+        help_text="Can customers choose an option from this category?"
+    )
     class Meta:
+        ordering = ["display_order", "name"]
         verbose_name = "Feature Category"
         verbose_name_plural = "Feature Categories"
 
@@ -229,7 +236,7 @@ class CartItem(models.Model):
 
     base_price = models.DecimalField( max_digits=12, decimal_places=2)
 
-    total_price = models.DecimalField( max_digits=12, decimal_places=2)
+    unit_price = models.DecimalField( max_digits=12, decimal_places=2)
 
     created_at = models.DateTimeField(auto_now_add=True)
 

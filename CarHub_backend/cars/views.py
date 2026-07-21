@@ -19,6 +19,142 @@ ALLOWED_SORT_FIELDS = {
     'model': 'car__name',
 }
 
+def find_matching_cart_item(
+    cart,
+    car,
+    engine,
+    transmission,
+    brake,
+    exhaust,
+    wheel,
+    features
+):
+
+    existing_items = (
+        CartItem.objects
+        .filter(
+            cart=cart,
+            car_model=car
+        )
+        .select_related(
+            'configuration'
+        )
+        .prefetch_related(
+            'configuration__features'
+        )
+    )
+
+    new_feature_ids = sorted(
+        [f.id for f in features]
+    )
+
+    print("Request Features:", new_feature_ids)
+
+    for item in existing_items:
+
+        config = item.configuration
+
+        print(f"\nChecking CartItem #{item.id}")
+
+        same_engine = (
+            config.engine_id ==
+            (engine.id if engine else None)
+        )
+
+        print(
+            "ENGINE:",
+            config.engine_id,
+            engine.id if engine else None,
+            same_engine
+        )
+
+        same_transmission = (
+            config.transmission_id ==
+            (transmission.id if transmission else None)
+        )
+
+        print(
+            "TRANSMISSION:",
+            config.transmission_id,
+            transmission.id if transmission else None,
+            same_transmission
+        )
+
+        same_brake = (
+            config.brake_id ==
+            (brake.id if brake else None)
+        )
+
+        print(
+            "BRAKE:",
+            config.brake_id,
+            brake.id if brake else None,
+            same_brake
+        )
+
+        same_exhaust = (
+            config.exhaust_id ==
+            (exhaust.id if exhaust else None)
+        )
+
+        print(
+            "EXHAUST:",
+            config.exhaust_id,
+            exhaust.id if exhaust else None,
+            same_exhaust
+        )
+
+        same_wheel = (
+            config.wheel_package_id ==
+            (wheel.id if wheel else None)
+        )
+
+        print(
+            "WHEEL:",
+            config.wheel_package_id,
+            wheel.id if wheel else None,
+            same_wheel
+        )
+
+        existing_feature_ids = sorted(
+            config.features.values_list(
+                'feature_id',
+                flat=True
+            )
+        )
+
+        print(
+            "FEATURES:",
+            existing_feature_ids,
+            new_feature_ids
+        )
+
+        same_features = (
+            existing_feature_ids ==
+            new_feature_ids
+        )
+
+        print(
+            "FEATURES MATCH:",
+            same_features
+        )
+
+        if (
+            same_engine and
+            same_transmission and
+            same_brake and
+            same_exhaust and
+            same_wheel and
+            same_features
+        ):
+            print(f"Found matching CartItem #{item.id}")
+
+            return item
+    
+    print("No matching CartItem found")
+
+    return None
+
 @api_view(['GET'])
 def car_list(request):
     queryset = CarModel.objects.select_related(
@@ -193,7 +329,10 @@ def add_to_cart(request):
 
     car = CarModel.objects.get(id=data['car_model_id'])
 
-    total_price = car.price
+    if customer.is_vip:
+        unit_price = car.vip_price
+    else: 
+        unit_price = car.price
 
     engine = None
     transmission = None
@@ -207,7 +346,7 @@ def add_to_cart(request):
             id=data['engine_id'],
             car_model=car
         )
-        total_price += engine.price
+        unit_price += engine.price
 
     # Transmission
     if 'transmission_id' in data:
@@ -215,7 +354,7 @@ def add_to_cart(request):
             id=data['transmission_id'],
             car_model=car
         )
-        total_price += transmission.price
+        unit_price += transmission.price
 
     # Brake
     if 'brake_id' in data:
@@ -223,7 +362,7 @@ def add_to_cart(request):
             id=data['brake_id'],
             car_model=car
         )
-        total_price += brake.price
+        unit_price += brake.price
 
     # Exhaust
     if 'exhaust_id' in data:
@@ -231,7 +370,7 @@ def add_to_cart(request):
             id=data['exhaust_id'],
             car_model=car
         )
-        total_price += exhaust.price
+        unit_price += exhaust.price
 
     # Wheels
     if 'wheel_package_id' in data:
@@ -239,7 +378,7 @@ def add_to_cart(request):
             id=data['wheel_package_id'],
             car_model=car
         )
-        total_price += wheel.price
+        unit_price += wheel.price
 
     # Features
     features = []
@@ -249,16 +388,59 @@ def add_to_cart(request):
             id__in=data['feature_ids'],
             car_model=car
         )
+    categories_seen = set()
+
+    for feature in features:
+
+        category_id = (
+            feature.feature.category_id
+        )
+        category_name = (
+            feature.feature.category.name
+        )
+        
+        if category_id in categories_seen:
+            return Response(
+                {
+                    "error":
+                    f"Only one feature can be selected from {category_name}"
+                },
+                status=400
+            )
+        categories_seen.add(category_id)
 
         for f in features:
-            total_price += f.price
+            unit_price += f.price
+
+    matching_item = find_matching_cart_item(
+        cart=cart,
+        car=car,
+        engine=engine,
+        transmission=transmission,
+        brake=brake,
+        exhaust=exhaust,
+        wheel=wheel,
+        features=features
+    )
+
+    if matching_item:
+
+        matching_item.quantity += data['quantity']
+
+        matching_item.save()
+
+        return Response({
+            "message": "Existing configuration updated",
+            "cart_item_id": matching_item.id,
+            "quantity": matching_item.quantity
+        })
 
     cart_item = CartItem.objects.create(
         cart=cart,
         car_model=car,
         quantity=data['quantity'],
         base_price=car.price,
-        total_price=total_price
+        unit_price=unit_price
     )
 
     config = CartItemConfiguration.objects.create(
@@ -306,9 +488,10 @@ def view_cart(request):
 
     serializer = CartItemSerializer(items, many=True)
 
-    cart_total = items.aggregate(
-        total=Sum('total_price')
-    )['total'] or 0
+    cart_total = sum(
+        item.unit_price * item.quantity 
+        for item in items
+    )
 
     return Response({
         "items": serializer.data,
@@ -368,18 +551,12 @@ def update_cart_quantity(request, item_id):
 
     cart_item.quantity = quantity
 
-    # IMPORTANT
-    # multiply stored single-item total
-    single_price = (
-        cart_item.total_price / cart_item.quantity
-    )
-
-    cart_item.total_price = single_price * quantity
+    total_price = cart_item.unit_price * quantity
 
     cart_item.save()
 
     return Response({
         "message": "Quantity updated",
         "quantity": cart_item.quantity,
-        "total_price": cart_item.total_price
+        "total_price": total_price
     })
