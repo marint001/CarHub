@@ -1,10 +1,20 @@
 from django.contrib import admin
 from .models import (Brand, Car, CarModel, Engine, CarModelEngine, FeatureCategory, Feature, Transmission, CarModelTransmission, Brake, CarModelBrake, Exhaust, CarModelExhaust, CarModelWheelPackage,
-                      WheelPackage, WheelDesign, Tyre, WheelSize, TyreSize, Color, CarModelFeature, CarModelSpecification)
+                      WheelPackage, WheelDesign, Tyre, WheelSize, TyreSize, Color, CarModelFeature, CarModelSpecification, CarModelImage)
+
+
+class CarModelImageInline(admin.TabularInline):
+    model = CarModelImage
+    extra = 1
+
+
+class CarModelAdmin(admin.ModelAdmin):
+    inlines = [CarModelImageInline]
+
 
 admin.site.register(Brand)
 admin.site.register(Car)
-admin.site.register(CarModel)
+admin.site.register(CarModel, CarModelAdmin)
 admin.site.register(Engine)
 admin.site.register(CarModelEngine)
 admin.site.register(FeatureCategory)

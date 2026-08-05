@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import (CarModel, CarModelEngine, Engine, CarModelFeature, Feature, FeatureCategory, CarModelWheelPackage, CarModelTransmission, CarModelBrake, Transmission, Brake, CarModelExhaust, Exhaust,
-                     CartItemFeature, CartItemConfiguration, CartItem)
+                     CartItemFeature, CartItemConfiguration, CartItem, CarModelSpecification, CarModelImage)
 
 
 class CarListSerializer(serializers.ModelSerializer):
@@ -126,13 +126,27 @@ class WheelPackageOptionSerializer(serializers.ModelSerializer):
             'price'
         ]
 
+class CarModelSpecificationSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = CarModelSpecification
+        fields = ['interior_length', 'interior_width', 'interior_height',
+         'exterior_length', 'exterior_width', 'exterior_height']
+
+class CarModelImageSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CarModelImage
+        fields = ['id', 'image', 'is_primary', 'order']
     
 class CarDetailSerializer(serializers.ModelSerializer):
     brand = serializers.CharField(source='car.brand.name')
     model = serializers.CharField(source='car.name')
 
+    images = CarModelImageSerializer(many=True)
+
     engines = EngineOptionSerializer(
-        source='car_model_engine_set',
+        source='car_model_engine',
         many=True
     )
 
@@ -158,6 +172,8 @@ class CarDetailSerializer(serializers.ModelSerializer):
 
     features = serializers.SerializerMethodField()
 
+    specs = serializers.SerializerMethodField()
+
     class Meta:
         model = CarModel
         fields = [
@@ -167,6 +183,12 @@ class CarDetailSerializer(serializers.ModelSerializer):
             'year',
             'price',
             'vip_price',
+            'drive',
+            'fuel_tank',
+            'seating_capacity',
+            'description',
+            'images',
+            'specs',
             'engines',
             'transmissions',
             'brakes',
@@ -200,6 +222,11 @@ class CarDetailSerializer(serializers.ModelSerializer):
         groups = list(grouped.values())
 
         return FeatureGroupSerializer(groups, many=True).data
+
+    def get_specs(self, obj):
+        if not hasattr(obj, 'specs'):
+            return None
+        return CarModelSpecificationSerializer(obj.specs).data
     
 
 class CarConfigurationSerializer(serializers.Serializer):
