@@ -8,9 +8,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 
 from .models import (CarModel, CarModelEngine, CarModelFeature, FeatureCategory, CarModelWheelPackage, CarModelTransmission, CarModelBrake, CarModelExhaust,
-                    Cart, CartItem, CartItemConfiguration, CartItemFeature)
-from .serializers import CarDetailSerializer, CarListSerializer, CarConfigurationSerializer, AddToCartSerializer, CartItemSerializer, UpdateCartQuantitySerializer
-from .filters import CarModelFilter
+                    Cart, CartItem, CartItemConfiguration, CartItemFeature, UsedCar)
+from .serializers import    (CarDetailSerializer, CarListSerializer, CarConfigurationSerializer, AddToCartSerializer, CartItemSerializer, UpdateCartQuantitySerializer,
+                            UsedCarSerializer)
+from .filters import CarModelFilter, UsedCarFilter
 
 ALLOWED_SORT_FIELDS = {
     'price': 'price',
@@ -560,3 +561,54 @@ def update_cart_quantity(request, item_id):
         "quantity": cart_item.quantity,
         "total_price": total_price
     })
+
+@api_view(['GET'])
+def used_car_list(request):
+    queryset = UsedCar.objects.filter(status='available').select_related(
+        'car',
+        'car__brand',
+        'transmission',
+        'exterior_color',
+    ).prefetch_related('images')
+
+    filterset = UsedCarFilter(request.GET, queryset=queryset)
+    queryset = filterset.qs
+
+    sort_param = request.GET.get('sort')
+
+    if sort_param:
+        descending = sort_param.startswith('-')
+        field = sort_param.lstrip('-')
+
+        if field in ALLOWED_SORT_FIELDS:
+            order_field = ALLOWED_SORT_FIELDS[field]
+            if descending:
+                order_field = f"-{order_field}"
+            queryset = queryset.order_by(order_field)
+    else:
+        queryset = queryset.order_by(
+            'car__brand__name',
+            'car__name',
+            '-year'
+        )
+
+    paginator = PageNumberPagination()
+    page = paginator.paginate_queryset(queryset, request)
+
+    serializer = UsedCarSerializer(page, many=True, context={'request': request})
+    return paginator.get_paginated_response(serializer.data)
+
+@api_view(['GET'])
+def used_car_detail(request, pk):
+    used_car = get_object_or_404(
+        UsedCar.objects.filter(status='available').select_related(
+            'car',
+            'car__brand',
+            'transmission',
+            'exterior_color',
+        ).prefetch_related('images'),
+        pk=pk
+    )
+
+    serializer = UsedCarSerializer(used_car, context={'request': request})
+    return Response(serializer.data)

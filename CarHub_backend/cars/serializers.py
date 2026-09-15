@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import (CarModel, CarModelEngine, Engine, CarModelFeature, Feature, FeatureCategory, CarModelWheelPackage, CarModelTransmission, CarModelBrake, Transmission, Brake, CarModelExhaust, Exhaust,
-                     CartItemFeature, CartItemConfiguration, CartItem, CarModelSpecification, CarModelImage)
+                     CartItemFeature, CartItemConfiguration, CartItem, CarModelSpecification, CarModelImage, UsedCar, UsedCarImage, Color)
 
 
 class CarListSerializer(serializers.ModelSerializer):
@@ -62,6 +62,11 @@ class CarListSerializer(serializers.ModelSerializer):
 
         user = request.user
         return user.is_staff or user.groups.filter(name='VIP').exists()
+
+class ColorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Color
+        fields = ['name', 'hex_code']
     
 class EngineOptionSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source='engine.engine_type')
@@ -170,6 +175,8 @@ class CarDetailSerializer(serializers.ModelSerializer):
     many=True
     )
 
+    exterior_color = ColorSerializer(read_only=True)
+
     features = serializers.SerializerMethodField()
 
     specs = serializers.SerializerMethodField()
@@ -187,6 +194,7 @@ class CarDetailSerializer(serializers.ModelSerializer):
             'fuel_tank',
             'seating_capacity',
             'description',
+            'exterior_color',
             'images',
             'specs',
             'engines',
@@ -237,6 +245,7 @@ class CarConfigurationSerializer(serializers.Serializer):
     brake_id = serializers.IntegerField(required=False)
     exhaust_id = serializers.IntegerField(required=False)
     wheel_package_id = serializers.IntegerField(required=False)
+    color_id = serializers.IntegerField(required=False)
 
     feature_ids = serializers.ListField(
         child=serializers.IntegerField(),
@@ -251,6 +260,7 @@ class AddToCartSerializer(serializers.Serializer):
     brake_id = serializers.IntegerField(required=False)
     exhaust_id = serializers.IntegerField(required=False)
     wheel_package_id = serializers.IntegerField(required=False)
+    color_id = serializers.IntegerField(required=False)
 
     feature_ids = serializers.ListField(
         child=serializers.IntegerField(),
@@ -352,3 +362,43 @@ class UpdateCartQuantitySerializer(serializers.Serializer):
 
 class CarBasicSerializer(serializers.ModelSerializer):
     brand = serializers.CharField(source='car.brand.name')
+    model = serializers.CharField(source='car.name')
+
+    class Meta:
+        model = CarModel
+        fields = ['id', 'brand', 'model', 'year']
+ 
+class UsedCarImageSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UsedCarImage
+        fields = ['id', 'image', 'is_primary', 'order']
+
+class UsedCarSerializer(serializers.ModelSerializer):
+    brand = serializers.CharField(source='car.brand.name')
+    model = serializers.CharField(source='car.name')
+    transmission = serializers.CharField(source='transmission.name')
+    exterior_color = ColorSerializer(read_only=True)
+
+    images = UsedCarImageSerializer(many=True)
+
+    class Meta:
+        model = UsedCar
+        fields = [
+            'id',
+            'code',
+            'brand',
+            'model',
+            'year',
+            'transmission',
+            'exterior_color',
+            'condition',
+            'vin',
+            'fuel_type',
+            'price',
+            'vip_price',
+            'mileage',
+            'description',
+            'status',
+            'images'
+        ]
