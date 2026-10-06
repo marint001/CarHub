@@ -2,6 +2,8 @@
 
 CarHub is a Django backend, it is a system that serves as a core for a digital car dealership. It handles everything from inventory management to a detailed vehicle customization system.
 
+For the current architecture, data model, API inventory, frontend status, known issues, and development roadmap, see [SYSTEM_DOCUMENTATION.md](SYSTEM_DOCUMENTATION.md).
+
 ## Technical Specifications
 - **Language:** Python 3.12
 - **Backend Framework:** Django 6.0
