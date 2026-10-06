@@ -330,7 +330,7 @@ def add_to_cart(request):
 
     car = CarModel.objects.get(id=data['car_model_id'])
 
-    if customer.is_vip:
+    if (request.user.is_staff or request.user.groups.filter(name='VIP').exists()) and car.vip_price is not None:
         unit_price = car.vip_price
     else: 
         unit_price = car.price

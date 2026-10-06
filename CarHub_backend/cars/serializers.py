@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from .models import (CarModel, CarModelEngine, Engine, CarModelFeature, Feature, FeatureCategory, CarModelWheelPackage, CarModelTransmission, CarModelBrake, Transmission, Brake, CarModelExhaust, Exhaust,
-                     CartItemFeature, CartItemConfiguration, CartItem, CarModelSpecification, CarModelImage, UsedCar, UsedCarImage, Color)
+from .models import (AccessoryCompatibility, CarModel, CarModelEngine, Engine, CarModelFeature, Feature, FeatureCategory, CarModelWheelPackage, CarModelTransmission, CarModelBrake, Transmission, Brake, CarModelExhaust, Exhaust,
+                     CartItemFeature, CartItemConfiguration, CartItem, CarModelSpecification, CarModelImage, UsedCar, UsedCarImage, Color, AccessoryImage, Accessory)
 
 
 class CarListSerializer(serializers.ModelSerializer):
@@ -145,6 +145,8 @@ class CarModelImageSerializer(serializers.ModelSerializer):
         fields = ['id', 'image', 'is_primary', 'order']
     
 class CarDetailSerializer(serializers.ModelSerializer):
+    vip_price = serializers.SerializerMethodField()
+    is_vip_visible = serializers.SerializerMethodField()
     brand = serializers.CharField(source='car.brand.name')
     model = serializers.CharField(source='car.name')
 
@@ -190,6 +192,7 @@ class CarDetailSerializer(serializers.ModelSerializer):
             'year',
             'price',
             'vip_price',
+            'is_vip_visible',
             'drive',
             'fuel_tank',
             'seating_capacity',
@@ -235,6 +238,28 @@ class CarDetailSerializer(serializers.ModelSerializer):
         if not hasattr(obj, 'specs'):
             return None
         return CarModelSpecificationSerializer(obj.specs).data
+
+    def get_vip_price(self, obj):
+        request = self.context.get('request')
+
+        if not request or not request.user.is_authenticated:
+            return None
+
+        user = request.user
+
+        if user.is_staff or user.groups.filter(name='VIP').exists():
+            return obj.vip_price
+
+        return None
+    
+    def get_is_vip_visible(self, obj):
+        request = self.context.get('request')
+
+        if not request or not request.user.is_authenticated:
+            return False
+
+        user = request.user
+        return user.is_staff or user.groups.filter(name='VIP').exists()
     
 
 class CarConfigurationSerializer(serializers.Serializer):
@@ -375,6 +400,8 @@ class UsedCarImageSerializer(serializers.ModelSerializer):
         fields = ['id', 'image', 'is_primary', 'order']
 
 class UsedCarSerializer(serializers.ModelSerializer):
+    vip_price = serializers.SerializerMethodField()
+    is_vip_visible = serializers.SerializerMethodField()
     brand = serializers.CharField(source='car.brand.name')
     model = serializers.CharField(source='car.name')
     transmission = serializers.CharField(source='transmission.name')
@@ -397,8 +424,89 @@ class UsedCarSerializer(serializers.ModelSerializer):
             'fuel_type',
             'price',
             'vip_price',
+            'is_vip_visible',
             'mileage',
             'description',
             'status',
             'images'
         ]
+
+    
+    def get_vip_price(self, obj):
+        request = self.context.get('request')
+
+        if not request or not request.user.is_authenticated:
+            return None
+
+        user = request.user
+
+        if user.is_staff or user.groups.filter(name='VIP').exists():
+            return obj.vip_price
+
+        return None
+    
+    def get_is_vip_visible(self, obj):
+        request = self.context.get('request')
+
+        if not request or not request.user.is_authenticated:
+            return False
+
+        user = request.user
+        return user.is_staff or user.groups.filter(name='VIP').exists()
+
+class AccessoryImageSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = AccessoryImage
+        fields = ['id', 'image', 'is_primary', 'order']
+
+class AccessoryCompatibilitySerializer(serializers.ModelSerializer):
+    brand = serializers.CharField(source='car.brand.name')
+    model = serializers.CharField(source='car.name')
+    year = serializers.IntegerField()
+
+    class Meta:
+        model = AccessoryCompatibility
+        fields = ['id', 'brand', 'model', 'year']
+
+class AccessorySerializer(serializers.ModelSerializer):
+    vip_price = serializers.SerializerMethodField()
+    is_vip_visible = serializers.SerializerMethodField()    
+    compatibilities = AccessoryCompatibilitySerializer(many=True, read_only=True)
+    images = AccessoryImageSerializer(many=True)
+
+    class Meta:
+        model = Accessory
+        fields = [
+            'id',
+            'name',
+            'description',
+            'price',
+            'vip_price',
+            'is_vip_visible',
+            'compatibilities',
+            'images'
+        ]
+
+    
+    def get_vip_price(self, obj):
+        request = self.context.get('request')
+
+        if not request or not request.user.is_authenticated:
+            return None
+
+        user = request.user
+
+        if user.is_staff or user.groups.filter(name='VIP').exists():
+            return obj.vip_price
+
+        return None
+    
+    def get_is_vip_visible(self, obj):
+        request = self.context.get('request')
+
+        if not request or not request.user.is_authenticated:
+            return False
+
+        user = request.user
+        return user.is_staff or user.groups.filter(name='VIP').exists()
