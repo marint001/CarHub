@@ -1,5 +1,5 @@
 import django_filters
-from .models import CarModel, UsedCar, FuelType
+from .models import CarModel, UsedCar, FuelType, Accessory, AccessoryCompatibility
 
 class CarModelFilter(django_filters.FilterSet):
     brand = django_filters.CharFilter(
@@ -48,3 +48,22 @@ class UsedCarFilter(django_filters.FilterSet):
     class Meta:
         model = UsedCar
         fields = ['brand', 'year', 'condition', 'fuel_type']
+
+class AccessoryFilter(django_filters.FilterSet):
+    brand = django_filters.CharFilter(
+        field_name='car__brand__name',
+        lookup_expr='icontains'
+    )
+
+    year = django_filters.NumberFilter(field_name='year')
+
+    min_price = django_filters.NumberFilter(
+        field_name='price', lookup_expr='gte'
+    )
+    max_price = django_filters.NumberFilter(
+        field_name='price', lookup_expr='lte'
+    )
+
+    class Meta:
+        model = CarModel
+        fields = ['brand', 'year']
