@@ -12,7 +12,7 @@ Project: Django + DRF backend, React frontend (not yet connected). Long-form doc
 
 User context: New to Python/coding, learning as they build. Wants to write model/logic code themselves; I review and explain concepts rather than writing it for them. Only implement directly if explicitly asked (documentation updates like this file are fine to do directly).
 
-Status: Models/admin for CarModel, UsedCar, and Accessory (with compatibility) are all finished (migrations through 0013, applied). UsedCar is fully wired end-to-end: serializer, filter, views, URLs. Accessory serializer is done; filter/views/urls are not. Still nothing committed to git — all changes sitting uncommitted on the `marint` branch alongside older uncommitted work.
+Status: Models/admin for CarModel, UsedCar, and Accessory (with compatibility) are all finished (migrations through 0013, applied). UsedCar is fully wired end-to-end: serializer, filter, views, URLs. Accessory is now also fully wired end-to-end (serializer, `AccessoryFilter`, `accessory_list`/`accessory_detail`, URLs) as of 2026-10-21 — user-written, reviewed, not yet tested against real DB rows. Still nothing committed to git — all changes sitting uncommitted on the `marint` branch alongside older uncommitted work.
 
 Done this session (user-written, reviewed by me):
 - Fixed `add_to_cart`'s VIP-price bug — it referenced non-existent `customer.is_vip` and crashed for every user. Now checks `request.user.is_staff or request.user.groups.filter(name='VIP').exists()`, falling back to `car.price` when `car.vip_price` is `None`.
@@ -22,8 +22,8 @@ Done this session (user-written, reviewed by me):
 - Confirmed `used_car_list`/`used_car_detail` are intentionally separate from `car_list`/`car_detail` (used cars and new cars are on different frontend pages) — no merged listing needed.
 
 Ready for next chat:
-1. Accessory filter (brand/year/min_price/max_price/requires_installation/compatibility — discussed, not written), `accessory_list`/`accessory_detail` views, `urls.py` entries. Mirrors the used-car pattern exactly.
-2. Sanity-check used_car_list/used_car_detail against real DB rows (same verification CarDetailSerializer got) — still not done.
+1. Fix `add_to_cart` feature-pricing bug: the `for f in features: unit_price += f.price` loop is nested inside the category-check loop (views.py ~413), so prices are added N times. Move it outside.
+2. Sanity-check used_car and accessory list/detail endpoints against real DB rows (same verification CarDetailSerializer got) — still not done.
 3. Nothing committed to git yet — worth doing before more work piles up uncommitted.
 
 Two design gaps found in a prior session (logged in PROGRESS.md §2, §7, and the "To Do" section — non-blocking, don't derail the accessory work above unless the user wants to pivot):

@@ -1,6 +1,6 @@
 # CarHub Progress Tracker
 
-Last updated: 2026-10-06
+Last updated: 2026-10-21
 
 Legend: [x] done and verified · [~] partially done / has known issues · [ ] not started
 
@@ -63,7 +63,9 @@ Legend: [x] done and verified · [~] partially done / has known issues · [ ] no
 - [x] `AccessoryCompatibility` - links an accessory to a `(car, year)` pair, so one record covers both the new-car listing and any used-car listing with that model/year; inlined on `AccessoryAdmin`
 - [x] Registered in Django admin
 - [x] `AccessoryImageSerializer`, `AccessoryCompatibilitySerializer`, `AccessorySerializer` (VIP-gated `vip_price`/`is_vip_visible`, same pattern as `CarListSerializer`/`UsedCarSerializer`)
-- [ ] `AccessoryFilter`, `accessory_list`/`accessory_detail` views, `urls.py` entries - next task, mirrors §6's used-car pattern
+- [x] `AccessoryFilter` in filters.py (brand/year via `compatibilities__...` with `distinct=True` to avoid duplicate rows, min_price/max_price, requires_installation)
+- [x] `accessory_list` / `accessory_detail` views + URLs (`accessories/`, `accessories/<int:pk>/`) - public, own `ACCESSORY_SORT_FIELDS` (price/name) since Accessory has no year/brand/model columns, default order by name
+- [ ] Not yet tested against real DB rows (same verification `CarDetailSerializer` got)
 
 ## 7. Stock / Inventory (NOT STARTED)
 - [ ] No stock/quantity-on-hand model or field exists for new or used cars
@@ -93,7 +95,8 @@ Legend: [x] done and verified · [~] partially done / has known issues · [ ] no
 
 ## Ready for next session
 - [ ] Sanity-check `used_car_list`/`used_car_detail` against real DB rows (same verification `CarDetailSerializer` got) - still not done
-- [ ] Accessory filter/views/urls (§6a) - serializer is done, this is the remaining piece
+- [ ] Sanity-check `accessory_list`/`accessory_detail` against real DB rows (filter by brand/year, confirm no duplicates)
+- [ ] Fix `add_to_cart` feature pricing bug: the `for f in features: unit_price += f.price` loop is nested inside the category-check loop (views.py ~line 413), so each feature's price is added once per selected feature (inflated unit_price). Move it out of the outer loop.
 - [ ] Nothing from the used-car or accessory work (filters.py/views.py/urls.py/serializers.py), or this session's cart fix, is committed to git yet - all still sitting uncommitted on `marint`
 
 ## To Do (open design questions, non-blocking)

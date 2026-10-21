@@ -51,11 +51,12 @@ class UsedCarFilter(django_filters.FilterSet):
 
 class AccessoryFilter(django_filters.FilterSet):
     brand = django_filters.CharFilter(
-        field_name='car__brand__name',
-        lookup_expr='icontains'
+        field_name='compatibilities__car__brand__name',
+        lookup_expr='icontains',
+        distinct=True
     )
 
-    year = django_filters.NumberFilter(field_name='year')
+    year = django_filters.NumberFilter(field_name='compatibilities__year', distinct=True)
 
     min_price = django_filters.NumberFilter(
         field_name='price', lookup_expr='gte'
@@ -64,6 +65,8 @@ class AccessoryFilter(django_filters.FilterSet):
         field_name='price', lookup_expr='lte'
     )
 
+    requires_installation = django_filters.BooleanFilter(field_name='requires_installation')
+
     class Meta:
-        model = CarModel
-        fields = ['brand', 'year']
+        model = Accessory
+        fields = ['brand', 'year', 'requires_installation']

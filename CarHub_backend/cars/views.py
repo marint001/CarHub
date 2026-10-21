@@ -7,11 +7,11 @@ from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 
-from .models import (CarModel, CarModelEngine, CarModelFeature, FeatureCategory, CarModelWheelPackage, CarModelTransmission, CarModelBrake, CarModelExhaust,
+from .models import (Accessory, CarModel, CarModelEngine, CarModelFeature, FeatureCategory, CarModelWheelPackage, CarModelTransmission, CarModelBrake, CarModelExhaust,
                     Cart, CartItem, CartItemConfiguration, CartItemFeature, UsedCar)
-from .serializers import    (CarDetailSerializer, CarListSerializer, CarConfigurationSerializer, AddToCartSerializer, CartItemSerializer, UpdateCartQuantitySerializer,
+from .serializers import    (AccessorySerializer, CarDetailSerializer, CarListSerializer, CarConfigurationSerializer, AddToCartSerializer, CartItemSerializer, UpdateCartQuantitySerializer,
                             UsedCarSerializer)
-from .filters import CarModelFilter, UsedCarFilter
+from .filters import AccessoryFilter, CarModelFilter, UsedCarFilter
 
 ALLOWED_SORT_FIELDS = {
     'price': 'price',
@@ -19,6 +19,8 @@ ALLOWED_SORT_FIELDS = {
     'brand': 'car__brand__name',
     'model': 'car__name',
 }
+
+ACCESSORY_SORT_FIELDS = {'price': 'price', 'name': 'name'}
 
 def find_matching_cart_item(
     cart,
@@ -611,4 +613,41 @@ def used_car_detail(request, pk):
     )
 
     serializer = UsedCarSerializer(used_car, context={'request': request})
+    return Response(serializer.data)
+
+@api_view(['GET'])
+def accessory_list(request):
+    queryset = Accessory.objects.prefetch_related('images', 'compatibilities__car__brand')
+
+    filterset = AccessoryFilter(request.GET, queryset=queryset)
+    queryset = filterset.qs
+
+    sort_param = request.GET.get('sort')
+
+    if sort_param:
+        descending = sort_param.startswith('-')
+        field = sort_param.lstrip('-')
+
+        if field in ACCESSORY_SORT_FIELDS:
+            order_field = ACCESSORY_SORT_FIELDS[field]
+            if descending:
+                order_field = f"-{order_field}"
+            queryset = queryset.order_by(order_field)
+    else:
+        queryset = queryset.order_by('name')
+
+    paginator = PageNumberPagination()
+    page = paginator.paginate_queryset(queryset, request)
+
+    serializer = AccessorySerializer(page, many=True, context={'request': request})
+    return paginator.get_paginated_response(serializer.data)
+
+@api_view(['GET'])
+def accessory_detail(request, pk):
+    accessory = get_object_or_404(
+        Accessory.objects.prefetch_related('images', 'compatibilities__car__brand'),
+        pk=pk
+    )
+
+    serializer = AccessorySerializer(accessory, context={'request': request})
     return Response(serializer.data)
